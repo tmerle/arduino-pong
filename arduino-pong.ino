@@ -21,6 +21,7 @@
   in any redistribution.
  ****************************************************/
 
+#include "pitches.h"
 #include "U8glib.h"
 // Hardware SPI version
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI 
@@ -252,23 +253,23 @@ void addEffect(int paddleSpeed)
 
 void soundStart() 
 {
-  tone(BEEPER, 250);
+  tone(BEEPER, NOTE_B3);
   delay(100);
-  tone(BEEPER, 500);
+  tone(BEEPER, NOTE_B4);
   delay(100);
-  tone(BEEPER, 1000);
+  tone(BEEPER, NOTE_B5);
   delay(100);
   noTone(BEEPER);
 }
 
 void soundBounce() 
 {
-  tone(BEEPER, 500, 50);
+  tone(BEEPER, NOTE_B4, 50);
 }
 
 void soundPoint() 
 {
-  tone(BEEPER, 150, 150);
+  tone(BEEPER, NOTE_D3, 150);
 }
 
 void centerPrint(char *text, int y, int font)
