@@ -57,6 +57,12 @@ enum {
   one_player_mode=1
 } GAME_MODE = two_player_mode;
 
+enum {
+  pong_game,
+  squash_game,
+  hockey_game
+} GAME_TYPE = squash_game;
+
 #define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
 #define WIN_SCORE 15 // The winner has to reach this score AND score 2 points more than the other!
@@ -74,6 +80,7 @@ float ballSpeedY = 2;
 int lastPaddleLocationA = 0;
 int lastPaddleLocationB = 0;
 
+int squashLeader=0; // In squash game, the one that last hit the ball
 int scoreA = 0;
 int scoreB = 0;
 int winner = 0;
@@ -98,7 +105,15 @@ void splash()
     if(winner==1)  centerPrint("PLAYER 1",18,2);
     else centerPrint("PLAYER 2",18,2);
   } else {
-    centerPrint("PONG",0, 2);
+    switch(GAME_TYPE) {
+      case pong_game:
+        centerPrint("PONG",0, 2);
+        break;
+      case squash_game:
+      default:
+        centerPrint("SQUASH",0, 2);
+        break;
+    }
     centerPrint("By Allan Alcorn",18,1);
     centerPrint("MichaelTeeuw.nl",27, 1);
     centerPrint("Bence Darabos",36, 1);
@@ -140,7 +155,7 @@ void calculateMovement()
     }
     else{//One player mode
       ai_count++;
-      if(!(ai_count%AI_HANDICAP)) {
+      if((!(ai_count%AI_HANDICAP)) && (squashLeader==0)) { // Note: it works even if not in SQUASH mode...
         // To the current location, add the half distance between the current location and the ideal position,
         paddleLocationB = paddleLocationB - (paddleLocationB - round(abs(ballY - PADDLE_HEIGHT / 2)))/2;
         ai_count=0;
@@ -153,73 +168,122 @@ void calculateMovement()
     ballX += ballSpeedX;
     ballY += ballSpeedY;
 
-    //bounce from top and bottom
-    if (ballY >= SCREEN_HEIGHT - BALL_SIZE || ballY <= 0) {
-      ballSpeedY *= -1;
-      soundBounce();
-    }
+    // Ball bouncing
+    switch(GAME_TYPE) {
+      case pong_game:
+        //bounce from top and bottom
+        if (ballY >= SCREEN_HEIGHT - BALL_SIZE || ballY <= 0) {
+          ballSpeedY *= -1;
+          soundBounce();
+        }
+        //bounce from paddle A
+        if (ballX >= PADDLE_PADDING && ballX <= PADDLE_PADDING+BALL_SIZE && ballSpeedX < 0) {
+          if (ballY > paddleLocationA - BALL_SIZE && ballY < paddleLocationA + PADDLE_HEIGHT) {
+            soundBounce();
+            ballSpeedX *= -1;
 
-    //bounce from paddle A
-    if (ballX >= PADDLE_PADDING && ballX <= PADDLE_PADDING+BALL_SIZE && ballSpeedX < 0) {
-      if (ballY > paddleLocationA - BALL_SIZE && ballY < paddleLocationA + PADDLE_HEIGHT) {
-        soundBounce();
-        ballSpeedX *= -1;
-      
-        addEffect(paddleSpeedA);
-      }
-    }
+            addEffect(paddleSpeedA);
+          }
+        }
+        //bounce from paddle B
+        if (ballX >= SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING-BALL_SIZE && ballX <= SCREEN_WIDTH-PADDLE_PADDING-BALL_SIZE && ballSpeedX > 0) {
+          if (ballY > paddleLocationB - BALL_SIZE && ballY < paddleLocationB + PADDLE_HEIGHT) {
+            soundBounce();
+            ballSpeedX *= -1;
 
-    //bounce from paddle B
-    if (ballX >= SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING-BALL_SIZE && ballX <= SCREEN_WIDTH-PADDLE_PADDING-BALL_SIZE && ballSpeedX > 0) {
-      if (ballY > paddleLocationB - BALL_SIZE && ballY < paddleLocationB + PADDLE_HEIGHT) {
-        soundBounce();
-        ballSpeedX *= -1;
-      
-        addEffect(paddleSpeedB);
-      }
-
+            addEffect(paddleSpeedB);
+          }
+        }
+        break;
+     case squash_game:
+     default:
+       //bounce from top and bottom
+       if (ballY >= SCREEN_HEIGHT - BALL_SIZE || ballY <= 0) {
+         ballSpeedY *= -1;
+         soundBounce();
+       }
+       //bounce from wall
+       if(ballX <= 0) {
+         ballSpeedX *= -1;
+         soundBounce();
+       }
+       //bounce from paddle A
+       if (ballX >= SCREEN_WIDTH-PADDLE_WIDTH*2-PADDLE_PADDING-BALL_SIZE && ballX <= SCREEN_WIDTH-PADDLE_PADDING-BALL_SIZE && ballSpeedX > 0) {
+         if (ballY > paddleLocationA - BALL_SIZE && ballY < paddleLocationA + PADDLE_HEIGHT) {
+           soundBounce();
+           ballSpeedX *= -1;
+           squashLeader = 0; // Up to B to hit the ball!
+           addEffect(paddleSpeedA);
+         }
+       }
+       //bounce from paddle B
+       if (ballX >= SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING-BALL_SIZE && ballX <= SCREEN_WIDTH-PADDLE_PADDING-BALL_SIZE && ballSpeedX > 0) {
+         if (ballY > paddleLocationB - BALL_SIZE && ballY < paddleLocationB + PADDLE_HEIGHT) {
+           soundBounce();
+           ballSpeedX *= -1;
+           squashLeader = 1; // Up to A to hit the ball!
+           addEffect(paddleSpeedB);
+         }
+       }
+       break;
     }
 
     //score points if ball hits wall behind paddle
-    if (ballX >= SCREEN_WIDTH - BALL_SIZE || ballX <= 0) {
-      if (ballSpeedX > 0) {
-        scoreA++;
-        ballX = SCREEN_WIDTH / 4;
-      }
-      if (ballSpeedX < 0) {
-        scoreB++;
-        ballX = SCREEN_WIDTH / 4 * 3;
-      }
-
-      soundPoint();
-
-      // The winner is the one that reached the winner score and scored 2 more points than the other.
-      if( (scoreA>=WIN_SCORE || scoreB>=WIN_SCORE) && (abs(scoreA-scoreB)>=2)) {
-        if(scoreA>=WIN_SCORE) winner=1; else winner=2;
-        // Reset the game
-        start = 0;
-        ballX = SCREEN_WIDTH/2;
-        ballY = SCREEN_HEIGHT/2;
-        ballSpeedX = 2;
-        ballSpeedY = 1;
-
-        lastPaddleLocationA = 0;
-        lastPaddleLocationB = 0;
-
-        scoreA = 0;
-        scoreB = 0;
-
-        soundWinner();
-
-        controlAstart = analogRead(CONTROL_A);
-        controlBstart = analogRead(CONTROL_B);
-      }
+    switch(GAME_TYPE) {
+      case pong_game:
+        if (ballX >= SCREEN_WIDTH - BALL_SIZE || ballX <= 0) {
+          if (ballSpeedX > 0) {
+            scoreA++;
+            ballX = SCREEN_WIDTH / 4;
+          }
+          if (ballSpeedX < 0) {
+            scoreB++;
+            ballX = SCREEN_WIDTH / 4 * 3;
+          }
+          soundPoint();
+          checkWinner();
+        }
+        break;
+      case squash_game:
+      default:
+        if (ballX >= SCREEN_WIDTH - BALL_SIZE) {
+          if(squashLeader==0) scoreA++;
+          else scoreB++;
+          ballX = SCREEN_WIDTH / 4;
+          soundPoint();
+          checkWinner();
+        }
+        break;
     }
-
     //set last paddle locations
     lastPaddleLocationA = paddleLocationA;
     lastPaddleLocationB = paddleLocationB;  
   }
+}
+
+void checkWinner()
+{
+  // The winner is the one that reached the winner score and scored 2 more points than the other.
+  if( (scoreA>=WIN_SCORE || scoreB>=WIN_SCORE) && (abs(scoreA-scoreB)>=2)) {
+    if(scoreA>=WIN_SCORE) winner=1; else winner=2;
+    // Reset the game
+    start = 0;
+    ballX = SCREEN_WIDTH/2;
+    ballY = SCREEN_HEIGHT/2;
+    ballSpeedX = 2;
+    ballSpeedY = 1;
+
+    lastPaddleLocationA = 0;
+    lastPaddleLocationB = 0;
+
+    scoreA = 0;
+    scoreB = 0;
+
+    soundWinner();
+
+    controlAstart = analogRead(CONTROL_A);
+    controlBstart = analogRead(CONTROL_B);
+    }
 }
 
 void draw() 
@@ -228,17 +292,39 @@ void draw()
     splash();
   }
   else{
-    //draw paddle A
-    u8g.drawVLine(PADDLE_PADDING, paddleLocationA, PADDLE_HEIGHT);
-    u8g.drawVLine(PADDLE_PADDING+1, paddleLocationA, PADDLE_HEIGHT);
+    switch(GAME_TYPE) {
+      case pong_game:
+        //draw paddle A
+        u8g.drawVLine(PADDLE_PADDING, paddleLocationA, PADDLE_HEIGHT);
+        u8g.drawVLine(PADDLE_PADDING+1, paddleLocationA, PADDLE_HEIGHT);
 
-    //draw paddle B
-    u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING, paddleLocationB, PADDLE_HEIGHT);
-    u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING+1, paddleLocationB, PADDLE_HEIGHT);
+        //draw paddle B
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING, paddleLocationB, PADDLE_HEIGHT);
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING+1, paddleLocationB, PADDLE_HEIGHT);
 
-    //draw center line
-    for (int i=0; i<SCREEN_HEIGHT; i+=4) {
-      u8g.drawVLine(SCREEN_WIDTH/2, i, 2);
+        //draw center line
+        for (int i=0; i<SCREEN_HEIGHT; i+=4) {
+          u8g.drawVLine(SCREEN_WIDTH/2, i, 2);
+        }
+      break;
+      case squash_game:
+      default:
+        //draw paddle A
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH*2-PADDLE_PADDING, paddleLocationA, PADDLE_HEIGHT);
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH*2-PADDLE_PADDING+1, paddleLocationA, PADDLE_HEIGHT);
+
+        //draw paddle B
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING, paddleLocationB, PADDLE_HEIGHT);
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_PADDING+1, paddleLocationB, PADDLE_HEIGHT);
+
+        //draw wall
+        u8g.drawVLine(0, 0, SCREEN_HEIGHT);
+        //draw top and bottom lines
+        for (int i=0; i<SCREEN_WIDTH; i+=4) {
+          u8g.drawHLine(i, 0, 2);
+          u8g.drawHLine(i, SCREEN_HEIGHT, 2);
+        }
+      break;
     }
 
     //draw ball
