@@ -22,7 +22,15 @@
  ****************************************************/
 
 #include "U8glib.h"
+// Hardware SPI version
 U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI 
+// Software SPI version
+#define OLED_MOSI   11
+#define OLED_CLK   12
+#define OLED_DC    9
+#define OLED_CS    8
+#define OLED_RESET 10
+//U8GLIB_SSD1306_ADAFRUIT_128X64 u8g(OLED_CLK, OLED_MOSI, OLED_CS, OLED_DC,OLED_RESET);
 
 //Define Pinse
 #define BEEPER 3
