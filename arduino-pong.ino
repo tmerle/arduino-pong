@@ -54,6 +54,8 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI
 #define MAX_Y_SPEED 2
 #define GAME_MODE 1 //1 - two player mode, 2 - one player mode
 
+#define WIN_SCORE 15 // The winner has to reach this score AND score 2 points more than the other!
+
 //Define Variables
 
 int paddleLocationA = 0;
@@ -69,6 +71,7 @@ int lastPaddleLocationB = 0;
 
 int scoreA = 0;
 int scoreB = 0;
+int winner = 0;
 
 int start = 0;
 int controlAstart;
@@ -84,10 +87,16 @@ void setup(){
 // //Splash Screen
 void splash()
 {
-  centerPrint("PONG",0, 2);
-  centerPrint("By Allan Alcorn",18,1);
-  centerPrint("MichaelTeeuw.nl",27, 1);
-  centerPrint("Bence Darabos",36, 1);
+  if(winner != 0) {
+    centerPrint("WINNER IS",0, 2);
+    if(winner==1)  centerPrint("PLAYER 1",18,2);
+    else centerPrint("PLAYER 2",18,2);
+  } else {
+    centerPrint("PONG",0, 2);
+    centerPrint("By Allan Alcorn",18,1);
+    centerPrint("MichaelTeeuw.nl",27, 1);
+    centerPrint("Bence Darabos",36, 1);
+  }
   centerPrint("Move paddle to start!",SCREEN_HEIGHT-11, 1);
 
   if (abs(controlAstart - analogRead(CONTROL_A) + controlBstart - analogRead(CONTROL_B)) > 50) {
@@ -171,7 +180,29 @@ void calculateMovement()
         ballX = SCREEN_WIDTH / 4 * 3;
       }
 
-      soundPoint();   
+      soundPoint();
+
+      // The winner is the one that reached the winner score and scored 2 more points than the other.
+      if( (scoreA>=WIN_SCORE || scoreB>=WIN_SCORE) && (abs(scoreA-scoreB)>=2)) {
+        if(scoreA>=WIN_SCORE) winner=1; else winner=2;
+        // Reset the game
+        start = 0;
+        ballX = SCREEN_WIDTH/2;
+        ballY = SCREEN_HEIGHT/2;
+        ballSpeedX = 2;
+        ballSpeedY = 1;
+
+        lastPaddleLocationA = 0;
+        lastPaddleLocationB = 0;
+
+        scoreA = 0;
+        scoreB = 0;
+
+        soundWinner();
+
+        controlAstart = analogRead(CONTROL_A);
+        controlBstart = analogRead(CONTROL_B);
+      }
     }
 
     //set last paddle locations
@@ -260,6 +291,24 @@ void soundStart()
   tone(BEEPER, NOTE_B5);
   delay(100);
   noTone(BEEPER);
+}
+
+void soundWinner() 
+{
+  int melody[] = {
+    NOTE_G4, NOTE_A4, NOTE_B4,NOTE_C4,0,NOTE_A4,NOTE_C4};
+
+  // note durations: 4 = quarter note, 8 = eighth note, etc.:
+  int noteDurations[] = {
+    8, 8, 8, 8,4,8,4 };
+
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+    int noteDuration = 1000/noteDurations[thisNote];
+    tone(BEEPER, melody[thisNote],noteDuration);
+    int pauseBetweenNotes = noteDuration;
+    delay(pauseBetweenNotes);
+    noTone(BEEPER);
+  }
 }
 
 void soundBounce() 
