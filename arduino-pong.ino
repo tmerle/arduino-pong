@@ -54,6 +54,8 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI
 #define MAX_Y_SPEED 2
 #define GAME_MODE 1 //1 - two player mode, 2 - one player mode
 
+#define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
+
 #define WIN_SCORE 15 // The winner has to reach this score AND score 2 points more than the other!
 
 //Define Variables
@@ -77,6 +79,7 @@ int start = 0;
 int controlAstart;
 int controlBstart;
 
+int ai_count=0;
 
 //Setup 
 void setup(){
@@ -133,7 +136,12 @@ void calculateMovement()
     paddleLocationB = map(controlB, 0, 1023, 0, SCREEN_HEIGHT - PADDLE_HEIGHT);
     }
     else{//One player mode
-    paddleLocationB = round(abs(ballY - PADDLE_HEIGHT / 2));
+      ai_count++;
+      if(!(ai_count%AI_HANDICAP)) {
+        // To the current location, add the half distance between the current location and the ideal position,
+        paddleLocationB = paddleLocationB - (paddleLocationB - round(abs(ballY - PADDLE_HEIGHT / 2)))/2;
+        ai_count=0;
+      }
     }
 
     int paddleSpeedA = paddleLocationA - lastPaddleLocationA;
