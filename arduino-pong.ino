@@ -52,7 +52,10 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI
 #define EFFECT_SPEED 0.5
 #define MIN_Y_SPEED 0.5
 #define MAX_Y_SPEED 2
-#define GAME_MODE 1 //1 - two player mode, 2 - one player mode
+enum {
+  two_player_mode=0,
+  one_player_mode=1
+} GAME_MODE = two_player_mode;
 
 #define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
@@ -132,7 +135,7 @@ void calculateMovement()
 
     paddleLocationA = map(controlA, 0, 1023, 0, SCREEN_HEIGHT - PADDLE_HEIGHT);
     
-    if(GAME_MODE == 1){//Two player mode
+    if(GAME_MODE == two_player_mode){
     paddleLocationB = map(controlB, 0, 1023, 0, SCREEN_HEIGHT - PADDLE_HEIGHT);
     }
     else{//One player mode
