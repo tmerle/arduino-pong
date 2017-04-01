@@ -46,6 +46,8 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI
 #define PADDLE_WIDTH 4
 #define PADDLE_HEIGHT 10
 #define PADDLE_PADDING 10
+#define PADDLE_HOCKEY_PADDING 3 // specific padding for hockey, seems to fit better.
+#define PADDLE2_HOCKEY_PADDING 90 // distance between second paddle and the first one
 #define BALL_SIZE 3
 #define SCORE_PADDING 10
 
@@ -61,7 +63,7 @@ enum {
   pong_game,
   squash_game,
   hockey_game
-} GAME_TYPE = squash_game;
+} GAME_TYPE = hockey_game;
 
 #define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
@@ -110,8 +112,11 @@ void splash()
         centerPrint("PONG",0, 2);
         break;
       case squash_game:
-      default:
         centerPrint("SQUASH",0, 2);
+        break;
+      case hockey_game:
+      default:
+        centerPrint("HOCKEY",0,2);
         break;
     }
     centerPrint("By Allan Alcorn",18,1);
@@ -196,7 +201,6 @@ void calculateMovement()
         }
         break;
      case squash_game:
-     default:
        //bounce from top and bottom
        if (ballY >= SCREEN_HEIGHT - BALL_SIZE || ballY <= 0) {
          ballSpeedY *= -1;
@@ -226,11 +230,59 @@ void calculateMovement()
          }
        }
        break;
+     case hockey_game:
+     default:
+       //bounce from top and bottom
+       if (ballY >= SCREEN_HEIGHT - BALL_SIZE || ballY <= 0) {
+         ballSpeedY *= -1;
+         soundBounce();
+       }
+       //bounce from corners
+       if ( (ballX >= SCREEN_WIDTH - BALL_SIZE-1 || ballX <= 1) &&
+          ((ballY >= SCREEN_HEIGHT-(SCREEN_HEIGHT-4*PADDLE_HEIGHT)/2) || (ballY <= (SCREEN_HEIGHT-4*PADDLE_HEIGHT)/2)) ) {
+         ballSpeedX *= -1;
+         soundBounce();
+       }
+       //bounce from paddle A-1
+       if (ballX >= PADDLE_HOCKEY_PADDING && ballX <= PADDLE_HOCKEY_PADDING+BALL_SIZE && ballSpeedX < 0) {
+         if (ballY > paddleLocationA - BALL_SIZE && ballY < paddleLocationA + PADDLE_HEIGHT) {
+           soundBounce();
+           ballSpeedX *= -1;
+           addEffect(paddleSpeedA);
+         }
+       }
+       //bounce from paddle A-2
+       if (ballX >= PADDLE_HOCKEY_PADDING+PADDLE2_HOCKEY_PADDING && ballX <= PADDLE_HOCKEY_PADDING+PADDLE2_HOCKEY_PADDING+BALL_SIZE && ballSpeedX < 0) {
+         if (ballY > paddleLocationA - BALL_SIZE && ballY < paddleLocationA + PADDLE_HEIGHT) {
+           soundBounce();
+           ballSpeedX *= -1;
+           addEffect(paddleSpeedA);
+         }
+       }
+       //bounce from paddle B-1
+       if (ballX >= SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_HOCKEY_PADDING-BALL_SIZE && ballX <= SCREEN_WIDTH-PADDLE_HOCKEY_PADDING-BALL_SIZE && ballSpeedX > 0) {
+         if (ballY > paddleLocationB - BALL_SIZE && ballY < paddleLocationB + PADDLE_HEIGHT) {
+           soundBounce();
+           ballSpeedX *= -1;
+           addEffect(paddleSpeedB);
+         }
+       }
+       //bounce from paddle B-2
+       if (ballX >= SCREEN_WIDTH-PADDLE_WIDTH-PADDLE2_HOCKEY_PADDING-PADDLE_HOCKEY_PADDING-BALL_SIZE && ballX <= SCREEN_WIDTH-PADDLE_HOCKEY_PADDING-PADDLE2_HOCKEY_PADDING-BALL_SIZE && ballSpeedX > 0) {
+         if (ballY > paddleLocationB - BALL_SIZE && ballY < paddleLocationB + PADDLE_HEIGHT) {
+           soundBounce();
+           ballSpeedX *= -1;
+           addEffect(paddleSpeedB);
+         }
+       }
+       break;
     }
 
     //score points if ball hits wall behind paddle
     switch(GAME_TYPE) {
+      case hockey_game:
       case pong_game:
+      default:
         if (ballX >= SCREEN_WIDTH - BALL_SIZE || ballX <= 0) {
           if (ballSpeedX > 0) {
             scoreA++;
@@ -245,7 +297,6 @@ void calculateMovement()
         }
         break;
       case squash_game:
-      default:
         if (ballX >= SCREEN_WIDTH - BALL_SIZE) {
           if(squashLeader==0) scoreA++;
           else scoreB++;
@@ -308,7 +359,6 @@ void draw()
         }
       break;
       case squash_game:
-      default:
         //draw paddle A
         u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH*2-PADDLE_PADDING, paddleLocationA, PADDLE_HEIGHT);
         u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH*2-PADDLE_PADDING+1, paddleLocationA, PADDLE_HEIGHT);
@@ -324,6 +374,40 @@ void draw()
           u8g.drawHLine(i, 0, 2);
           u8g.drawHLine(i, SCREEN_HEIGHT, 2);
         }
+      break;
+      case hockey_game:
+        //draw paddle A-1
+        u8g.drawVLine(PADDLE_HOCKEY_PADDING, paddleLocationA, PADDLE_HEIGHT);
+        u8g.drawVLine(PADDLE_HOCKEY_PADDING+1, paddleLocationA, PADDLE_HEIGHT);
+    
+        //draw paddle A-2
+        u8g.drawVLine(PADDLE_HOCKEY_PADDING+PADDLE2_HOCKEY_PADDING, paddleLocationA, PADDLE_HEIGHT);
+        u8g.drawVLine(PADDLE_HOCKEY_PADDING+PADDLE2_HOCKEY_PADDING+1, paddleLocationA, PADDLE_HEIGHT);
+    
+        //draw paddle B-1
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_HOCKEY_PADDING, paddleLocationB, PADDLE_HEIGHT);
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_HOCKEY_PADDING+1, paddleLocationB, PADDLE_HEIGHT);
+    
+        //draw paddle B-2
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_HOCKEY_PADDING-PADDLE2_HOCKEY_PADDING, paddleLocationB, PADDLE_HEIGHT);
+        u8g.drawVLine(SCREEN_WIDTH-PADDLE_WIDTH-PADDLE_HOCKEY_PADDING+1-PADDLE2_HOCKEY_PADDING, paddleLocationB, PADDLE_HEIGHT);
+    
+        //draw center line
+        for (int i=0; i<SCREEN_HEIGHT; i+=4) {
+          u8g.drawVLine(SCREEN_WIDTH/2, i, 2);
+        }
+    
+         //draw top and bottom lines
+        for (int i=0; i<SCREEN_WIDTH; i+=4) {
+          u8g.drawHLine(i, 0, 2);
+          u8g.drawHLine(i, SCREEN_HEIGHT, 2);
+        }
+    
+        // draw corners. The hole behind the paddle is 4 times the size of the paddle
+        u8g.drawVLine(0,0, (SCREEN_HEIGHT-4*PADDLE_HEIGHT)/2);
+        u8g.drawVLine(0,SCREEN_HEIGHT-(SCREEN_HEIGHT-4*PADDLE_HEIGHT)/2, 2*PADDLE_HEIGHT);
+        u8g.drawVLine(SCREEN_WIDTH,0, (SCREEN_HEIGHT-4*PADDLE_HEIGHT)/2);
+        u8g.drawVLine(SCREEN_WIDTH,SCREEN_HEIGHT-(SCREEN_HEIGHT-4*PADDLE_HEIGHT)/2, 2*PADDLE_HEIGHT);
       break;
     }
 
