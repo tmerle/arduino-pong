@@ -65,6 +65,9 @@ enum {
   hockey_game
 } GAME_TYPE = hockey_game;
 
+// Comment-out if you don't have wired push buttons.
+#define GAME_TYPE_PIN 4 // Wire a pull-up pushbutton in front of this pin to choose game mode
+
 #define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
 #define WIN_SCORE 15 // The winner has to reach this score AND score 2 points more than the other!
@@ -97,6 +100,10 @@ int ai_count=0;
 void setup(){
   controlAstart = analogRead(CONTROL_A);
   controlBstart = analogRead(CONTROL_B);
+#ifdef GAME_TYPE_PIN
+  // initialize the GAME_TYPE pin as an input:
+  pinMode(GAME_TYPE_PIN, INPUT);
+#endif
 }
 
 // //Splash Screen
@@ -119,6 +126,25 @@ void splash()
         centerPrint("HOCKEY",0,2);
         break;
     }
+#ifdef GAME_TYPE_PIN
+    int buttonState = digitalRead(GAME_TYPE_PIN);
+    if (buttonState == HIGH) {
+      switch(GAME_TYPE) {
+        case pong_game:
+          GAME_TYPE=squash_game;
+          break;
+        case squash_game:
+          GAME_TYPE=hockey_game;
+          break;
+        case hockey_game:
+        default:
+          GAME_TYPE=pong_game;
+          break;
+      }
+      delay(50); debounce: // wait a little while before releasing
+      while(digitalRead(GAME_TYPE_PIN) == HIGH); // wait for the user to release the button
+    }
+#endif
     centerPrint("By Allan Alcorn",18,1);
     centerPrint("MichaelTeeuw.nl",27, 1);
     centerPrint("Bence Darabos",36, 1);
