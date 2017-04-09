@@ -49,6 +49,8 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI
 #define PADDLE_HOCKEY_PADDING 3 // specific padding for hockey, seems to fit better.
 #define PADDLE2_HOCKEY_PADDING 90 // distance between second paddle and the first one
 #define BALL_SIZE 3
+#define BALL_SPEEDX 4
+#define BALL_SPEEDY 2
 #define SCORE_PADDING 10
 
 #define EFFECT_SPEED 0.5
@@ -76,8 +78,8 @@ int paddleLocationB = 0;
 
 float ballX = SCREEN_WIDTH/2;
 float ballY = SCREEN_HEIGHT/2;
-float ballSpeedX = 4;
-float ballSpeedY = 2;
+float ballSpeedX = BALL_SPEEDX;
+float ballSpeedY = BALL_SPEEDY;
 
 int lastPaddleLocationA = 0;
 int lastPaddleLocationB = 0;
@@ -321,8 +323,8 @@ void checkWinner()
     start = 0;
     ballX = SCREEN_WIDTH/2;
     ballY = SCREEN_HEIGHT/2;
-    ballSpeedX = 2;
-    ballSpeedY = 1;
+    ballSpeedX = BALL_SPEEDX;
+    ballSpeedY = BALL_SPEEDY;
 
     lastPaddleLocationA = 0;
     lastPaddleLocationB = 0;
