@@ -69,6 +69,7 @@ enum {
 
 // Comment-out if you don't have wired push buttons.
 #define GAME_TYPE_PIN 4 // Wire a pull-up pushbutton in front of this pin to choose game mode
+#define GAME_MODE_PIN 5 // Wire a pull-up pushbutton in front of this pin to choose game mode
 
 #define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
@@ -105,6 +106,10 @@ void setup(){
 #ifdef GAME_TYPE_PIN
   // initialize the GAME_TYPE pin as an input:
   pinMode(GAME_TYPE_PIN, INPUT);
+#endif
+#ifdef GAME_MODE_PIN
+  // initialize the GAME_MODE pin as an input:
+  pinMode(GAME_MODE_PIN, INPUT);
 #endif
 }
 
@@ -143,13 +148,31 @@ void splash()
           GAME_TYPE=pong_game;
           break;
       }
-      delay(50); debounce: // wait a little while before releasing
+      delay(50); // debounce: wait a little while before releasing
       while(digitalRead(GAME_TYPE_PIN) == HIGH); // wait for the user to release the button
     }
 #endif
-    centerPrint("By Allan Alcorn",18,1);
-    centerPrint("MichaelTeeuw.nl",27, 1);
-    centerPrint("Bence Darabos",36, 1);
+#ifdef GAME_MODE_PIN
+    int buttonStateGM = digitalRead(GAME_MODE_PIN);
+    if (buttonStateGM == HIGH) {
+      if(GAME_MODE==one_player_mode) {
+        GAME_MODE=two_player_mode;
+      } else {
+        GAME_MODE=one_player_mode;
+      }
+      delay(50); // debounce: wait a little while before releasing
+      while(digitalRead(GAME_MODE_PIN) == HIGH); // wait for the user to release the button
+    }
+#endif
+    if(GAME_MODE==one_player_mode) {
+      leftPrint("1P",18,2);
+    } else {
+      leftPrint("2P",18,2);
+    }
+
+    centerPrint("By Allan Alcorn",24,1);
+    centerPrint("MichaelTeeuw.nl",32, 1);
+    centerPrint("Bence Darabos",40, 1);
   }
   centerPrint("Move paddle to start!",SCREEN_HEIGHT-11, 1);
 
@@ -528,6 +551,32 @@ void soundBounce()
 void soundPoint() 
 {
   tone(BEEPER, NOTE_D3, 150);
+}
+
+void leftPrint(char *text, int y, int font)
+{
+  if(font==1){
+    u8g.setFont(u8g_font_6x10);
+    u8g.setPrintPos(0, y + FONT_SIZE_H);
+  }
+  else{
+    u8g.setFont(u8g_font_unifont);
+    u8g.setPrintPos(0, y + FONT_SIZE_H);
+  }
+  u8g.print(text);
+}
+
+void rightPrint(char *text, int y, int font)
+{
+  if(font==1){
+    u8g.setFont(u8g_font_6x10);
+    u8g.setPrintPos(SCREEN_WIDTH/2-((strlen(text))*6), y + FONT_SIZE_H);
+  }
+  else{
+    u8g.setFont(u8g_font_unifont);
+    u8g.setPrintPos(SCREEN_WIDTH/2-((strlen(text))*6), y + FONT_SIZE_H);
+  }
+  u8g.print(text);
 }
 
 void centerPrint(char *text, int y, int font)
