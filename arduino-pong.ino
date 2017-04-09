@@ -73,8 +73,13 @@ enum {
 #define GAME_TYPE_PIN 4 // Wire a pull-up pushbutton in front of this pin to choose game mode
 #define GAME_MODE_PIN 5 // Wire a pull-up pushbutton in front of this pin to choose game mode
 #define BALL_SPEED_PIN 6 // Wire a pull-up pushbutton in front of this pin to choose ball speed
+#define AI_FORCE_PIN 7 // Wire a pull-up pushbutton in front of this pin to choose AI strongness
 
-#define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
+enum {
+  strong=1,
+  medium=2,
+  bad=3
+} AI_HANDICAP=medium; // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
 #define WIN_SCORE 15 // The winner has to reach this score AND score 2 points more than the other!
 
@@ -121,6 +126,10 @@ void setup(){
 #ifdef BALL_SPEED_PIN
   // initialize the BALL_SPEED pin as an input:
   pinMode(BALL_SPEED_PIN, INPUT);
+#endif
+#ifdef AI_FORCE_PIN
+  // initialize the AI strongness pin as an input:
+  pinMode(AI_FORCE_PIN, INPUT);
 #endif
 }
 
@@ -191,6 +200,25 @@ void splash()
       while(digitalRead(BALL_SPEED_PIN) == HIGH); // wait for the user to release the button
     }
 #endif
+#ifdef AI_FORCE_PIN
+    int buttonStateAF = digitalRead(AI_FORCE_PIN);
+    if (buttonStateAF == HIGH) {
+      switch(AI_HANDICAP) {
+        case bad:
+          AI_HANDICAP=medium;
+          break;
+        case medium:
+          AI_HANDICAP=strong;
+          break;
+        case strong:
+        default:
+          AI_HANDICAP=bad;
+          break;
+      }
+      delay(50); // debounce: wait a little while before releasing
+      while(digitalRead(AI_FORCE_PIN) == HIGH); // wait for the user to release the button
+    }
+#endif
     if(GAME_MODE==one_player_mode) {
       leftPrint("1P",18,2);
     } else {
@@ -200,6 +228,13 @@ void splash()
       rightPrint("SLOW",18,2);
     } else {
       rightPrint("FAST",18,2);
+    }
+    if(AI_HANDICAP==bad) {
+      centerPrint("BAD",18,2);
+    } else if(AI_HANDICAP==medium) {
+      centerPrint("MED",18,2);
+    } else {
+      centerPrint("STRONG",18,2);
     }
 
     centerPrint("By Allan Alcorn",24,1);
