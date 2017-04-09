@@ -49,8 +49,10 @@ U8GLIB_SSD1306_128X64 u8g(U8G_I2C_OPT_NONE|U8G_I2C_OPT_DEV_0);  // I2C / TWI
 #define PADDLE_HOCKEY_PADDING 3 // specific padding for hockey, seems to fit better.
 #define PADDLE2_HOCKEY_PADDING 90 // distance between second paddle and the first one
 #define BALL_SIZE 3
-#define BALL_SPEEDX 4
-#define BALL_SPEEDY 2
+#define BALL_SPEEDX_SLOW 2
+#define BALL_SPEEDY_SLOW 1
+#define BALL_SPEEDX_FAST 4
+#define BALL_SPEEDY_FAST 2
 #define SCORE_PADDING 10
 
 #define EFFECT_SPEED 0.5
@@ -70,6 +72,7 @@ enum {
 // Comment-out if you don't have wired push buttons.
 #define GAME_TYPE_PIN 4 // Wire a pull-up pushbutton in front of this pin to choose game mode
 #define GAME_MODE_PIN 5 // Wire a pull-up pushbutton in front of this pin to choose game mode
+#define BALL_SPEED_PIN 6 // Wire a pull-up pushbutton in front of this pin to choose ball speed
 
 #define AI_HANDICAP 2 // 1-player AI strongness. 1 is unbeatable, higher makes AI easier to beat.
 
@@ -82,8 +85,12 @@ int paddleLocationB = 0;
 
 float ballX = SCREEN_WIDTH/2;
 float ballY = SCREEN_HEIGHT/2;
-float ballSpeedX = BALL_SPEEDX;
-float ballSpeedY = BALL_SPEEDY;
+enum {
+  slow,
+  fast
+} ballSpeedMode = fast;
+float ballSpeedX = BALL_SPEEDX_FAST;
+float ballSpeedY = BALL_SPEEDY_FAST;
 
 int lastPaddleLocationA = 0;
 int lastPaddleLocationB = 0;
@@ -110,6 +117,10 @@ void setup(){
 #ifdef GAME_MODE_PIN
   // initialize the GAME_MODE pin as an input:
   pinMode(GAME_MODE_PIN, INPUT);
+#endif
+#ifdef BALL_SPEED_PIN
+  // initialize the BALL_SPEED pin as an input:
+  pinMode(BALL_SPEED_PIN, INPUT);
 #endif
 }
 
@@ -164,10 +175,31 @@ void splash()
       while(digitalRead(GAME_MODE_PIN) == HIGH); // wait for the user to release the button
     }
 #endif
+#ifdef BALL_SPEED_PIN
+    int buttonStateBS = digitalRead(BALL_SPEED_PIN);
+    if (buttonStateBS == HIGH) {
+      if(ballSpeedMode==slow) {
+        ballSpeedX=BALL_SPEEDX_FAST;
+        ballSpeedY=BALL_SPEEDY_FAST;
+        ballSpeedMode=fast;
+      } else {
+        ballSpeedX=BALL_SPEEDX_SLOW;
+        ballSpeedY=BALL_SPEEDY_SLOW;
+        ballSpeedMode=slow;
+      }
+      delay(50); // debounce: wait a little while before releasing
+      while(digitalRead(BALL_SPEED_PIN) == HIGH); // wait for the user to release the button
+    }
+#endif
     if(GAME_MODE==one_player_mode) {
       leftPrint("1P",18,2);
     } else {
       leftPrint("2P",18,2);
+    }
+    if(ballSpeedMode==slow) {
+      rightPrint("SLOW",18,2);
+    } else {
+      rightPrint("FAST",18,2);
     }
 
     centerPrint("By Allan Alcorn",24,1);
@@ -372,9 +404,13 @@ void checkWinner()
     start = 0;
     ballX = SCREEN_WIDTH/2;
     ballY = SCREEN_HEIGHT/2;
-    ballSpeedX = BALL_SPEEDX;
-    ballSpeedY = BALL_SPEEDY;
-
+    if(ballSpeedMode==slow) {
+      ballSpeedX = BALL_SPEEDX_SLOW;
+      ballSpeedY = BALL_SPEEDY_SLOW;
+    } else {
+      ballSpeedX = BALL_SPEEDX_FAST;
+      ballSpeedY = BALL_SPEEDY_FAST;
+    }
     lastPaddleLocationA = 0;
     lastPaddleLocationB = 0;
 
@@ -570,11 +606,11 @@ void rightPrint(char *text, int y, int font)
 {
   if(font==1){
     u8g.setFont(u8g_font_6x10);
-    u8g.setPrintPos(SCREEN_WIDTH/2-((strlen(text))*6), y + FONT_SIZE_H);
+    u8g.setPrintPos(SCREEN_WIDTH-((strlen(text)+1)*6), y + FONT_SIZE_H); // Experience shows that you should add 1 char to text...
   }
   else{
     u8g.setFont(u8g_font_unifont);
-    u8g.setPrintPos(SCREEN_WIDTH/2-((strlen(text))*6), y + FONT_SIZE_H);
+    u8g.setPrintPos(SCREEN_WIDTH-((strlen(text)+1)*6), y + FONT_SIZE_H); // Experience shows that you should add 1 char to text...
   }
   u8g.print(text);
 }
