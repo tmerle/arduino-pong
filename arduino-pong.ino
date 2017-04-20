@@ -133,6 +133,12 @@ void setup(){
 #endif
 }
 
+// delay after which we reset the startup screen when there is a winner
+#define RESTART_TIMEOUT 5000
+
+// Absolute date at which we state that our timer is out (for winner screen)
+unsigned long restart_timeout_timestamp=0;
+
 // //Splash Screen
 void splash()
 {
@@ -250,6 +256,9 @@ void splash()
     delay(200);
     start = 1;
   }
+  // Once we reached the timeout date for winner screen, return to splash screen
+  if( (winner!=0) && (restart_timeout_timestamp<millis()))
+    { winner=0;}
 }
 
 //Loop
@@ -456,6 +465,7 @@ void checkWinner()
 
     controlAstart = analogRead(CONTROL_A);
     controlBstart = analogRead(CONTROL_B);
+    restart_timeout_timestamp=millis()+RESTART_TIMEOUT; 
     }
 }
 
